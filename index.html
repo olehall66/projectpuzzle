@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Puzzle Creator</title>
+    <link href="../css/bootstrap.css" rel="stylesheet">
+    <style media="screen">
+      #begin_image{
+        z-index:10;
+        position:fixed;top:11px;left:11px;
+        display:none;
+      }
+      #puzzle_board{
+        z-index: 1;
+        position:fixed;top:10px;left:10px;
+        background-color:white;
+        border:1px solid red;
+        opacity:1;
+        height:10px;
+        width:10px;
+        display:none;
+      }
+      .no_margins{
+        margin:0px;
+        padding:0px;
+      }
+      .puzzle_piece{
+        height:10%;
+        width:10%;
+        background-color:white;
+        border:1px solid red;
+        overflow:hidden;
+      }
+      #start_btn{
+        position: fixed; bottom:20%; left:20%;
+        z-index:100;
+      }
+      #little_image{
+        position:relative;
+        top:10px;
+      }
+      #results{
+        display:none;
+        height:50px;width:150px;
+        border:2px solid red;
+        border-radius:10px;
+        position:relative; top:150px;
+        text-align:center;
+
+      }
+
+
+    </style>
+  </head>
+  <body>
+    <div id="start_page" class="container-fluid">
+      <div class="row">
+        <div id="image_picker" class="col-xs-12"><p>Pick an image to turn into a 100 piece puzzle!</p>
+
+        </div>
+      </div>
+    </div>
+
+
+
+
+    <div id="results">You are currently at:<br/><span id="current_pieces">0</span>% percent!</div>
+
+    <div id="puzzle_board">
+      <div class="container-fluid no_margins">
+        <div id="fluid_board" class="col-xs-12 no_margins">
+        </div>
+      </div>
+    </div>
+
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../js/imagedata.js"></script>
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script type="text/javascript">
+$(document).ready(function(){
+
+    var new_height,new_width;
+    var list_of_images=["../images/random.jpg","../images/test_pic.png"];
+    var picked_image=list_of_images[1];
+    var top_position_counter=0;
+    var correct_order_puz=[];
+    var random_ordered_puz=[];
+    var picking=0;
+    var picked_up,placed_down;
+
+var pull_images_src=function(){
+  for (var x=0;x<4;x++){
+    walls[x].forEach(function(imgObject){
+      if (typeof imgObject=="object") list_of_images.push("../"+imgObject.imgSrc);
+    });
+  };console.log(list_of_images);
+};
+
+var pick_image=function(){
+    $('body').append('<a id="start_btn" href="#" class="btn btn-info">Click here to make the Puzzle!</a>');
+    for (var a=0;a<list_of_images.length;a++){
+      if (a%4===0) $('#image_picker').append('<div class="clearfix"></div>');
+      $('#image_picker').append('<div class="col-xs-3"><img id="image'+a+'" class="picker img-responsive img-thumbnail center-block" src='+list_of_images[a]+' /></div>');
+    }
+    var clicked=true;
+    $('.picker').on('click',function(event){
+      if (clicked==true){
+        $('#'+event.target.id).css('border','2px solid red');
+        clicked=false;
+      } else {
+        $('#'+event.target.id).css('border','none');
+        clicked=true;
+      };
+      picked_image=list_of_images[event.target.id.slice(5)];
+      if (event.target.id.slice(5)==0) {
+        var c=Math.floor(Math.random()*list_of_images.length);
+        picked_image=list_of_images[c];
+      }
+    });
+};  //end pick_image
+
+var calculate_image=function(){
+    $('body').append('<img id="begin_image" src="'+picked_image+'" />');
+// ensures puzzle picture and puzzle board are the biggest/best size according to user's screen
+    new_height=$('#begin_image').height();
+    new_width=$('#begin_image').width();
+
+// runs if image is too big and adjusts to fit window size
+      while (new_height>=window.innerHeight*.90 || new_width>=window.innerWidth*.65){
+        new_height*=.99;
+        new_width*=.99;
+      };
+
+//runs if image is too small and adjusts to fit window size
+      while (new_height<window.innerHeight*.90 && new_width<window.innerWidth*.65){
+        new_height*=1.01;
+        new_width*=1.01;
+      };
+// creates the puzzle board size based on user current window size
+      $('#begin_image').attr('height',new_height+20+"px");
+      $('#begin_image').attr('width',new_width+20+"px");
+
+      $('#puzzle_board, #fluid_board').height(new_height+20);
+      $('#puzzle_board, #fluid_board').width(new_width+20);
+
+//create the correct order puzzle in the form of an array
+//this also "locks in" the portion of the image seen through the puzzle piece
+      for (var a=0;a<100;a++){
+        correct_order_puz[a]=["piece"+a,"img_position"+a,new_height+"px",new_width+"px"];
+        if (a%10==0 && a!==0){
+          top_position_counter++;
+        };
+        var left_position=(a%10)*(-100), top_position=top_position_counter*-100;
+        correct_order_puz[a].push(left_position,top_position);
+      };
+// randomize puzzle piece order on board
+// cloneing the correct_order_puz so it an be checked later this clone is destroyed by splice()
+      var array_data_holder=[];
+      array_data_holder=correct_order_puz;
+
+      for (var a=0;a<100;a++){
+        var rand_num=Math.floor(Math.random()*array_data_holder.length);
+        random_ordered_puz[a]=array_data_holder[rand_num];
+        random_ordered_puz[a].push(a);
+        array_data_holder.splice(rand_num,1);
+      };
+
+}; // end calculate_image()
+
+// places puzzle pieces on the board function
+          top_position_counter=0;
+var place_pieces=function(array){
+          $('#fluid_board').append('<div id="'+array[0]+'" class="test'+ array[6]+'  col-xs-1 puzzle_piece no_margins">'+
+            '<img id="'+array[1]+'" src="'+picked_image+'" /></div>');
+            $('#'+array[1]).attr('height',array[2]);
+            $('#'+array[1]).attr('width',array[3]);
+
+            $('#'+array[1]).css('position','relative').css('left',array[4]+'%').css('top',array[5]+'%');
+
+};  //end place_pieces()
+
+var replace_pieces=function(array){
+        var correct_pieces_placed=0;
+        $('#fluid_board').empty();
+        var correct_count=0;
+        for (b=0;b<100;b++){
+        $('#fluid_board').append('<div id="'+array[b][0]+'" class="test'+ array[b][6]+'  col-xs-1 puzzle_piece no_margins">'+
+          '<img id="'+array[b][1]+'" src="'+picked_image+'" /></div>');
+          $('#'+array[b][1]).attr('height',array[b][2]);
+          $('#'+array[b][1]).attr('width',array[b][3]);
+
+          $('#'+array[b][1]).css('position','relative').css('left',array[b][4]+'%').css('top',array[b][5]+'%');
+          var checker=parseInt(array[b][0].slice(5));
+
+          if (checker===array[b][6]){
+            $('#'+array[b][0]).css('border-color','green');
+            correct_pieces_placed++
+          }
+        }
+        $('#current_pieces').text(correct_pieces_placed);
+};  //end replace_pieces
+
+var clicky=function(){
+        picking++;
+        if (picking%2===1){
+          picked_up='piece'+event.target.id.slice(12);
+          $('#'+picked_up).css('opacity','.5');
+
+        }
+
+        if (picking%2===0){
+          placed_down='piece'+event.target.id.slice(12);
+          $('#'+picked_up).css('opacity','1');
+
+          var picked_index=($('#'+picked_up)[0].className.slice(4,6));
+          var placed_index=($('#'+placed_down)[0].className.slice(4,6));
+          picked_index=parseInt(picked_index);
+          placed_index=parseInt(placed_index);
+
+          var swap_holder=random_ordered_puz[placed_index];
+          var swap_location=swap_holder.pop();
+          random_ordered_puz[placed_index]=random_ordered_puz[picked_index];
+          random_ordered_puz[picked_index]=swap_holder;
+          random_ordered_puz[picked_index].push(random_ordered_puz[placed_index].pop());
+          random_ordered_puz[placed_index].push(swap_location);
+
+          replace_pieces(random_ordered_puz);
+          picking++;
+        }
+        if (picking%3===0){
+          picking=0;
+          swap_holder=-1;
+        $('.puzzle_piece').on('click',function(event){
+            clicky();
+        });
+        }
+}; //end clicky()
+
+/* --------------------------- function calls --------------------*/
+pull_images_src();
+pick_image();
+
+$('#start_btn').on('click',function(){
+
+
+  calculate_image();
+  for (var b=0;b<100;b++){
+    place_pieces(random_ordered_puz[b]);
+  };
+  $('.puzzle_piece').on('click',function(event){
+
+      clicky();
+  });
+
+  $('#start_page').hide();
+  $('#begin_image').show();
+  $('#start_btn').fadeOut(1000);
+
+  setTimeout(4000); //quick view of total puzzle
+
+  setTimeout(function(){
+    var small_img=[new_height*.4,new_width*.4];
+    $('#begin_image').css({'height':small_img[0],
+        'width':small_img[1]
+        });
+    $('#puzzle_board').fadeIn(2000);
+    $('#begin_image').fadeIn(2000).css('left',new_width+40+'px');
+    $('#results').fadeIn(2000).css({
+        'left':Math.max((new_width+40)+(small_img[1]-150)/2,(new_width+40))+'px',
+        'top':small_img[0]+20+'px'
+        });
+  },2000)
+}); //end click on #start_btn
+
+
+
+(1>2)?console.log("1 is more then 2"):console.log("2 is more then 1");
+
+}); //end document.ready()
+    </script>
+  </body>
+</html>
